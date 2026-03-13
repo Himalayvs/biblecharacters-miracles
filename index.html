@@ -4514,23 +4514,35 @@ function filterCharacters() {
   const query = document.getElementById('searchInput').value.toLowerCase().trim();
   const activeFilter = document.querySelector('#charactersSection .filter-btn.active').dataset.filter;
 
-  let filtered = characters;
+  let pool = activeFilter !== 'all'
+    ? characters.filter(c => c.tags.includes(activeFilter))
+    : characters;
 
-  if (activeFilter !== 'all') {
-    filtered = filtered.filter(c => c.tags.includes(activeFilter));
-  }
+  if (!query) { renderCharacters(pool); return; }
 
-  if (query) {
-    filtered = filtered.filter(c =>
-      c.name.toLowerCase().includes(query) ||
-      c.role.toLowerCase().includes(query) ||
-      c.deeds.toLowerCase().includes(query) ||
-      c.godUsed.toLowerCase().includes(query) ||
-      c.tags.some(t => t.includes(query))
-    );
-  }
+  // Tier 1: name starts with query
+  const t1 = pool.filter(c => c.name.toLowerCase().startsWith(query));
+  // Tier 2: name contains query (but doesn't start with it)
+  const t2 = pool.filter(c => !c.name.toLowerCase().startsWith(query) && c.name.toLowerCase().includes(query));
+  // Tier 3: role contains query
+  const t1t2names = new Set([...t1, ...t2].map(c => c.name));
+  const t3 = pool.filter(c => !t1t2names.has(c.name) && c.role.toLowerCase().includes(query));
+  // Tier 4: original name / pronunciation / meaning
+  const topNames = new Set([...t1, ...t2, ...t3].map(c => c.name));
+  const t4 = pool.filter(c => !topNames.has(c.name) && (
+    (c.originalName && c.originalName.toLowerCase().includes(query)) ||
+    (c.nameMeaning && c.nameMeaning.toLowerCase().includes(query))
+  ));
+  // Tier 5: body content (deeds, godUsed, verse)
+  const headerNames = new Set([...t1, ...t2, ...t3, ...t4].map(c => c.name));
+  const t5 = pool.filter(c => !headerNames.has(c.name) && (
+    c.deeds.toLowerCase().includes(query) ||
+    c.godUsed.toLowerCase().includes(query) ||
+    c.verse.toLowerCase().includes(query) ||
+    c.tags.some(t => t.includes(query))
+  ));
 
-  renderCharacters(filtered);
+  renderCharacters([...t1, ...t2, ...t3, ...t4, ...t5]);
 }
 
 // ==========================================
@@ -4640,23 +4652,30 @@ function filterMiracles() {
   const query = document.getElementById('miracleSearch').value.toLowerCase().trim();
   const activeFilter = document.querySelector('#miracleCatFilters .filter-btn.active').dataset.mcat;
 
-  let filtered = miracles;
+  let pool = activeFilter !== 'all'
+    ? miracles.filter(m => m.categories.includes(activeFilter))
+    : miracles;
 
-  if (activeFilter !== 'all') {
-    filtered = filtered.filter(m => m.categories.includes(activeFilter));
-  }
+  if (!query) { renderMiracles(pool); return; }
 
-  if (query) {
-    filtered = filtered.filter(m =>
-      m.name.toLowerCase().includes(query) ||
-      m.description.toLowerCase().includes(query) ||
-      m.significance.toLowerCase().includes(query) ||
-      m.performer.toLowerCase().includes(query) ||
-      m.verse.toLowerCase().includes(query)
-    );
-  }
+  // Tier 1: name starts with query
+  const t1 = pool.filter(m => m.name.toLowerCase().startsWith(query));
+  // Tier 2: name contains query (but doesn't start with it)
+  const t2 = pool.filter(m => !m.name.toLowerCase().startsWith(query) && m.name.toLowerCase().includes(query));
+  // Tier 3: performer contains query
+  const t1t2names = new Set([...t1, ...t2].map(m => m.name));
+  const t3 = pool.filter(m => !t1t2names.has(m.name) && m.performer.toLowerCase().includes(query));
+  // Tier 4: verse reference
+  const topNames = new Set([...t1, ...t2, ...t3].map(m => m.name));
+  const t4 = pool.filter(m => !topNames.has(m.name) && m.verse.toLowerCase().includes(query));
+  // Tier 5: body content (description, significance)
+  const headerNames = new Set([...t1, ...t2, ...t3, ...t4].map(m => m.name));
+  const t5 = pool.filter(m => !headerNames.has(m.name) && (
+    m.description.toLowerCase().includes(query) ||
+    m.significance.toLowerCase().includes(query)
+  ));
 
-  renderMiracles(filtered);
+  renderMiracles([...t1, ...t2, ...t3, ...t4, ...t5]);
 }
 
 renderMiracles(miracles);
